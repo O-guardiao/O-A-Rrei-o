@@ -1,0 +1,23 @@
+[package]
+name    = "arreio-vault"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+anyhow      = { workspace = true }
+thiserror   = { workspace = true }
+regex       = { workspace = true }
+arreio-kernel = { path = "../arreio-kernel" }
+arreio-security = { path = "../arreio-security" }
+uuid        = { workspace = true }
+aes-gcm     = { workspace = true }
+sha2        = { workspace = true }
+pbkdf2      = { workspace = true }
+rand        = { workspace = true }
+keyring     = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

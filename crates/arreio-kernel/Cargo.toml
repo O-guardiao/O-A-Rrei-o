@@ -1,0 +1,22 @@
+[package]
+name    = "arreio-kernel"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[features]
+default = ["sqlite"]
+sqlite = ["dep:rusqlite"]
+
+[dependencies]
+serde      = { workspace = true }
+serde_json = { workspace = true }
+uuid       = { workspace = true }
+anyhow     = { workspace = true }
+thiserror  = { workspace = true }
+
+sha2       = { workspace = true }
+rusqlite   = { workspace = true, optional = true, features = ["bundled"] }
+
+[dev-dependencies]
+tempfile = "3"

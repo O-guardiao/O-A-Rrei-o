@@ -1,0 +1,21 @@
+[package]
+name = "arreio-bridge-cursor"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+arreio-mcp-server = { path = "../arreio-mcp-server" }
+arreio-mcp = { path = "../arreio-mcp" }
+arreio-a2a = { path = "../arreio-a2a" }
+arreio-provider = { path = "../arreio-provider" }
+arreio-kernel = { path = "../arreio-kernel" }
+arreio-hypervisor = { path = "../arreio-hypervisor" }
+arreio-web = { path = "../arreio-web" }
+arreio-dag = { path = "../arreio-dag" }
+arreio-fsm = { path = "../arreio-fsm" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+tempfile = { workspace = true }

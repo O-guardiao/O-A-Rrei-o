@@ -1,0 +1,15 @@
+[package]
+name = "arreio-benchmark"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+arreio-provider = { path = "../arreio-provider" }
+arreio-kernel = { path = "../arreio-kernel" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+regex = { workspace = true }
+uuid = { workspace = true }
+tempfile = { workspace = true }

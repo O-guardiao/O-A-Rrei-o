@@ -1,0 +1,25 @@
+[package]
+name    = "arreio-tools"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+anyhow      = { workspace = true }
+thiserror   = { workspace = true }
+regex       = { workspace = true }
+arreio-kernel = { path = "../arreio-kernel" }
+arreio-provider = { path = "../arreio-provider" }
+arreio-actors = { path = "../arreio-actors" }
+arreio-hypervisor = { path = "../arreio-hypervisor" }
+arreio-security = { path = "../arreio-security" }
+arreio-memory = { path = "../arreio-memory" }
+arreio-dag    = { path = "../arreio-dag" }
+arreio-mcp    = { path = "../arreio-mcp" }
+arreio-web    = { path = "../arreio-web" }
+arreio-media  = { path = "../arreio-media" }
+arreio-skills = { path = "../arreio-skills" }
+tempfile    = { workspace = true }
+crossbeam-channel = { workspace = true }

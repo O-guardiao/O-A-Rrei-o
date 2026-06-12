@@ -1,0 +1,17 @@
+[package]
+name    = "arreio-media"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+anyhow      = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+arreio-kernel = { path = "../arreio-kernel" }
+arreio-provider = { path = "../arreio-provider" }
+regex       = { workspace = true }
+tempfile    = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

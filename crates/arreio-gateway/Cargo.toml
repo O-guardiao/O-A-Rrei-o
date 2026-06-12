@@ -1,0 +1,24 @@
+[package]
+name    = "arreio-gateway"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+anyhow      = { workspace = true }
+uuid        = { workspace = true }
+arreio-kernel = { path = "../arreio-kernel" }
+arreio-fsm    = { path = "../arreio-fsm" }
+arreio-dag    = { path = "../arreio-dag" }
+arreio-scheduler = { path = "../arreio-scheduler" }
+arreio-telemetry = { path = "../arreio-telemetry" }
+arreio-provider = { path = "../arreio-provider" }
+arreio-memory = { path = "../arreio-memory" }
+arreio-skills = { path = "../arreio-skills" }
+arreio-security = { path = "../arreio-security" }
+arreio-vault = { path = "../arreio-vault" }
+
+[dev-dependencies]
+tempfile = { workspace = true }

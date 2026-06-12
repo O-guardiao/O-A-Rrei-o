@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O Arreio Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    line-height: 1.5;
+  }
+  header {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 1.4rem; color: #58a6ff; }
+  .controls button {
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 0.4rem 0.8rem;
+    margin-left: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .controls button:hover { background: #30363d; }
+  .controls button.primary { background: #238636; border-color: #238636; color: #fff; }
+  .controls button.danger { background: #da3633; border-color: #da3633; color: #fff; }
+
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem 2rem;
+  }
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .panel h2 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Kanban */
+  .kanban {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+  }
+  .kanban-col {
+    min-width: 140px;
+    background: #0d1117;
+    border-radius: 6px;
+    padding: 0.5rem;
+    flex: 1;
+  }
+  .kanban-col h3 {
+    font-size: 0.75rem;
+    color: #8b949e;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+  .kanban-card {
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.8rem;
+    cursor: default;
+  }
+  .kanban-card .id { color: #58a6ff; font-weight: 600; }
+  .kanban-card.status-Success { border-left: 3px solid #238636; }
+  .kanban-card.status-Running { border-left: 3px solid #d29922; }
+  .kanban-card.status-Failed  { border-left: 3px solid #da3633; }
+  .kanban-card.status-Waiting { border-left: 3px solid #8b949e; }
+  .kanban-card.status-Ready   { border-left: 3px solid #1f6feb; }
+
+  /* FSM */
+  .fsm-states {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .fsm-state {
+    padding: 0.3rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    background: #21262d;
+    border: 1px solid #30363d;
+  }
+  .fsm-state.active {
+    background: #1f6feb;
+    border-color: #58a6ff;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Terminal */
+  .terminal {
+    background: #0d1117;
+    border-radius: 6px;
+    padding: 0.5rem;
+    height: 220px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+  }
+  .terminal .line { margin-bottom: 0.2rem; }
+  .terminal .time { color: #8b949e; margin-right: 0.4rem; }
+  .terminal .info { color: #58a6ff; }
+  .terminal .ok   { color: #3fb950; }
+  .terminal .err  { color: #f85149; }
+  .terminal .warn { color: #d29922; }
+
+  /* Skills */
+  .skill-list {
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .skill-item {
+    padding: 0.4rem;
+    border-bottom: 1px solid #21262d;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .skill-item:last-child { border-bottom: none; }
+  .skill-trust { font-size: 0.75rem; padding: 0.1rem 0.4rem; border-radius: 4px; }
+  .skill-trust.trusted   { background: #1a3a2a; color: #3fb950; }
+  .skill-trust.validated { background: #3a2e0a; color: #d29922; }
+  .skill-trust.untrusted { background: #3a1a1a; color: #f85149; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ O Arreio Dashboard</h1>
+  <div class="controls">
+    <button onclick="api('run')" class="primary">▶ Run</button>
+    <button onclick="api('resume')">⏵ Resume</button>
+    <button onclick="api('rollback')" class="danger">↺ Rollback</button>
+    <button onclick="loadStatus()">⟳ Refresh</button>
+  </div>
+</header>
+
+<main>
+  <div class="panel">
+    <h2>Kanban — DAG</h2>
+    <div class="kanban" id="kanban"></div>
+  </div>
+
+  <div class="panel">
+    <h2>FSM — Estado da Execução</h2>
+    <div class="fsm-states" id="fsm"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Terminal de Eventos</h2>
+    <div class="terminal" id="terminal"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Skills Aprendidas</h2>
+    <div class="skill-list" id="skills"></div>
+  </div>
+</main>
+
+<script>
+const STATES = ['Idle','Exploration','Planning','Execution','Evaluation','Correction','Consolidation','StrategicRetreat'];
+const STATUS_ORDER = ['Waiting','Ready','Running','Success','Failed'];
+
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    renderKanban(d.dag.nodes);
+    renderFsm(d.fsm);
+  } catch (e) { log('Erro ao carregar status: ' + e, 'err'); }
+}
+
+async function loadSkills() {
+  try {
+    const r = await fetch('/api/skills');
+    const d = await r.json();
+    const el = document.getElementById('skills');
+    el.innerHTML = d.skills.length ? '' : '<div class="skill-item">Nenhuma skill ainda.</div>';
+    // Ícones visuais por trust_level
+    const TRUST_ICONS = { trusted: '🟢', validated: '🟡', untrusted: '🔴' };
+    d.skills.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'skill-item';
+      const icon = TRUST_ICONS[s.trust_level.toLowerCase()] || '⚪';
+      div.innerHTML = icon + ' <span class="skill-trust ' + s.trust_level.toLowerCase() + '">' + s.trust_level + '</span> <strong>' + esc(s.name) + '</strong> <span style="color:#8b949e">mods=' + s.module_count + '</span>';
+      el.appendChild(div);
+    });
+  } catch (e) { log('Erro ao carregar skills: ' + e, 'err'); }
+}
+
+function renderKanban(nodes) {
+  const cols = {};
+  STATUS_ORDER.forEach(s => cols[s] = []);
+  (nodes || []).forEach(n => {
+    if (cols[n.status]) cols[n.status].push(n);
+  });
+  const kb = document.getElementById('kanban');
+  kb.innerHTML = '';
+  STATUS_ORDER.forEach(status => {
+    const col = document.createElement('div');
+    col.className = 'kanban-col';
+    col.innerHTML = '<h3>' + status + ' (' + cols[status].length + ')</h3>';
+    cols[status].forEach(n => {
+      const card = document.createElement('div');
+      card.className = 'kanban-card status-' + n.status;
+      card.innerHTML = '<span class="id">' + n.id + '</span> ' + n.title;
+      col.appendChild(card);
+    });
+    kb.appendChild(col);
+  });
+}
+
+function renderFsm(current) {
+  const el = document.getElementById('fsm');
+  el.innerHTML = '';
+  STATES.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'fsm-state' + (s === current ? ' active' : '');
+    div.textContent = s;
+    el.appendChild(div);
+  });
+}
+
+async function api(action) {
+  try {
+    const r = await fetch('/api/' + action, { method: 'POST' });
+    const d = await r.json();
+    log('API ' + action + ': ' + JSON.stringify(d), 'info');
+    setTimeout(loadStatus, 500);
+  } catch (e) { log('API ' + action + ' erro: ' + e, 'err'); }
+}
+
+function log(msg, cls) {
+  const t = document.getElementById('terminal');
+  const line = document.createElement('div');
+  line.className = 'line ' + (cls || '');
+  const time = new Date().toLocaleTimeString('pt-BR');
+  line.innerHTML = '<span class="time">[' + time + ']</span><span class="' + cls + '">' + esc(msg) + '</span>';
+  t.appendChild(line);
+  t.scrollTop = t.scrollHeight;
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// SSE
+function connectEvents() {
+  const es = new EventSource('/api/events');
+  es.onmessage = (ev) => {
+    try {
+      const d = JSON.parse(ev.data);
+      log('[' + d.category + '] ' + d.key + ': ' + JSON.stringify(d.value).slice(0, 120), 'info');
+    } catch (e) { log(ev.data, 'warn'); }
+  };
+  es.onerror = () => { log('SSE desconectado. Reconectando...', 'warn'); setTimeout(connectEvents, 3000); };
+}
+
+loadStatus();
+loadSkills();
+connectEvents();
+setInterval(loadStatus, 5000);
+setInterval(loadSkills, 10000);
+</script>
+</body>
+</html>

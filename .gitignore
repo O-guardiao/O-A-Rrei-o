@@ -1,0 +1,78 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# O Arreio — .gitignore de publicação
+# Regra: na dúvida, NÃO commita. Segredo vazado em histórico git é permanente.
+# Lista completa de exclusões + racional: handoffs PVC → PUBLICACAO_EXCLUSOES.md
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ── Build / artefatos ────────────────────────────────────────────────────────
+/target/
+**/target/
+*.rlib
+*.dll
+*.exe
+*.pdb
+
+# ── Segredos e credenciais (nunca, em hipótese alguma) ──────────────────────
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+**/keys.json
+**/secrets/
+**/credentials/
+*api_key*
+*apikey*
+!**/api_key_store.rs
+
+# ── Estado de runtime do Arreio (gerado em execução; pode conter prompts,
+#    respostas de LLM e dados de sessão do usuário) ──────────────────────────
+.arreio/
+**/.arreio/
+blackboard.json
+**/blackboard*.json
+**/audit/*.log
+*.sqlite
+*.sqlite3
+*.db
+
+# ── Pesquisa, estratégia e documentação interna (NÃO publicar) ───────────────
+# (âncora na raiz para não pegar pastas docs/ legítimas dentro de crates)
+/handoffs_spec-driven-devolopment.PVC/
+/docs/
+/protocolo/
+/HANDOFF.md
+/HANDOFF - Copia.md
+/ANALISE_REAL_HANDOFF.md
+/ANALISE_REAL_HANDOFF - Copia.md
+# conversas privadas com LLMs (pesquisa/estratégia) na raiz
+/conversa*.md
+
+# ── Config local de máquina (caminhos pessoais; usar o .example versionado) ──
+/.cargo/config.toml
+
+# ── Arquivos de trabalho/rascunho ────────────────────────────────────────────
+*- Copia.md
+* - Copia.md
+let_underscore*.txt
+unwrap_default_results.txt
+*.tmp
+*.bak
+*.orig
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+
+# ── IDE / SO ─────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# estado legado local (pre-rename): ainda ignorar
+.omni/

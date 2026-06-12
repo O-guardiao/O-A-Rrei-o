@@ -1,0 +1,18 @@
+[package]
+name    = "arreio-agents"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+anyhow      = { workspace = true }
+regex       = { workspace = true }
+uuid        = { workspace = true }
+tempfile    = { workspace = true }
+arreio-kernel = { path = "../arreio-kernel" }
+arreio-dag    = { path = "../arreio-dag" }
+arreio-provider = { path = "../arreio-provider" }
+arreio-tools  = { path = "../arreio-tools" }
+arreio-hypervisor = { path = "../arreio-hypervisor" }

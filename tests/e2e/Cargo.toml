@@ -1,0 +1,36 @@
+[package]
+name = "arreio-e2e-tests"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+publish = false
+
+[dependencies]
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"
+serde_json = "1"
+anyhow = "1"
+
+arreio-actors = { path = "../../crates/arreio-actors" }
+arreio-agents = { path = "../../crates/arreio-agents" }
+arreio-autopoiesis = { path = "../../crates/arreio-autopoiesis" }
+arreio-cli = { path = "../../crates/arreio-cli" }
+arreio-contract = { path = "../../crates/arreio-contract" }
+arreio-dag = { path = "../../crates/arreio-dag" }
+arreio-fsm = { path = "../../crates/arreio-fsm" }
+arreio-hypervisor = { path = "../../crates/arreio-hypervisor" }
+arreio-kernel = { path = "../../crates/arreio-kernel" }
+arreio-memory = { path = "../../crates/arreio-memory" }
+arreio-ooda = { path = "../../crates/arreio-ooda" }
+arreio-provider = { path = "../../crates/arreio-provider" }
+arreio-reasoning = { path = "../../crates/arreio-reasoning" }
+arreio-benchmark = { path = "../../crates/arreio-benchmark" }
+arreio-commissioning = { path = "../../crates/arreio-commissioning" }
+arreio-recovery = { path = "../../crates/arreio-recovery" }
+arreio-security = { path = "../../crates/arreio-security" }
+arreio-telemetry = { path = "../../crates/arreio-telemetry" }
+arreio-tools = { path = "../../crates/arreio-tools" }
+arreio-vault = { path = "../../crates/arreio-vault" }
+arreio-mcp-server = { path = "../../crates/arreio-mcp-server" }
+arreio-a2a = { path = "../../crates/arreio-a2a" }

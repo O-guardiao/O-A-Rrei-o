@@ -1,0 +1,16 @@
+[package]
+name        = "zmij"
+version     = "1.0.21"
+edition     = "2021"
+rust-version = "1.71"
+description = "A double-to-string conversion algorithm based on Schubfach and yy"
+license     = "MIT"
+# build.rs removido: o único cfg que define (zmij_no_select_unpredictable)
+# só é necessário em rustc < 1.88. Rustc 1.95+ não precisa dele.
+
+[lib]
+name = "zmij"
+path = "src/lib.rs"
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(zmij_no_select_unpredictable)', 'cfg(feature, values("no-panic"))'] }

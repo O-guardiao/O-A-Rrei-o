@@ -1,0 +1,30 @@
+{
+  "id": "chatcmpl-fixture-deepseek-v4-pro-001",
+  "object": "chat.completion",
+  "created": 1720000000,
+  "model": "deepseek-v4-pro",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "O usuário está perguntando sobre a linguagem Rust. É uma pergunta conceitual que requer explicação sobre segurança de memória, borrow checker e performance. Vou estruturar a resposta em tópicos claros."
+          },
+          {
+            "type": "output",
+            "output": "Rust é uma linguagem de programação de sistemas com foco em segurança de memória sem garbage collector. Seus principais diferenciais são:\n\n1. **Borrow Checker**: garante segurança em tempo de compilação\n2. **Zero-cost abstractions**: performance equivalente a C/C++\n3. **Pattern matching**: expressivo e exaustivo\n4. **Traits**: polimorfismo sem herança"
+          }
+        ]
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 25,
+    "completion_tokens": 120,
+    "total_tokens": 145
+  }
+}

@@ -1,0 +1,25 @@
+pub mod agent_credential;
+pub mod audit;
+pub mod dlp;
+pub mod escalation;
+pub mod forensics;
+pub mod jwt;
+pub mod leak_prevention;
+pub mod mergeable_rules;
+pub mod permission_modes;
+pub mod rbac;
+pub mod redact;
+pub mod yolo_classifier;
+
+pub use agent_credential::{AgentCredential, CapabilityScope};
+pub use audit::{AuditCategory, AuditEntry, AuditLog, AuditTrail};
+pub use dlp::{DlpEngine, DlpMatch, DlpPattern, DlpSeverity};
+pub use escalation::{EscalationEngine, EscalationPolicy, EscalationPolicySet, EvaluationContext, PolicyAction, PolicyMatch, PolicyTrigger};
+pub use forensics::ExecutionForensics;
+pub use jwt::{hash_token, issue_token, issue_token_with_secret, verify_token, verify_token_with_secret, JwtClaims, JwtError};
+pub use leak_prevention::LeakPrevention;
+pub use mergeable_rules::{PermissionRule, PermissionRules, RuleDecision, RuleMerger, RuleScope};
+pub use permission_modes::{ModeAuthorization, PermissionModeId, PermissionModeSpec, ToolCategory};
+pub use rbac::{Permission, RbacEngine, Role};
+pub use redact::{redaction_enabled, RedactingFormatter, RedactionEngine, _REDACT_ENABLED};
+pub use yolo_classifier::{ApprovalDecision, LlmStage2Backend, SessionRiskContext, YoloClassifier};

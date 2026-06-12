@@ -1,0 +1,16 @@
+[package]
+name    = "arreio-contract"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+serde      = { workspace = true }
+serde_json = { workspace = true }
+anyhow     = { workspace = true }
+thiserror  = { workspace = true }
+regex      = "1"
+arreio-kernel = { path = "../arreio-kernel" }
+
+[dev-dependencies]
+tempfile = { workspace = true }

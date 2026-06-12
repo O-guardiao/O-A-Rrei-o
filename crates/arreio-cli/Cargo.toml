@@ -1,0 +1,57 @@
+[lib]
+name = "arreio_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "arreio"
+path = "src/main.rs"
+
+[package]
+name    = "arreio-cli"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+serde_yaml  = "0.9"
+anyhow      = { workspace = true }
+clap        = { workspace = true }
+arreio-kernel     = { path = "../arreio-kernel" }
+arreio-fsm        = { path = "../arreio-fsm" }
+arreio-actors     = { path = "../arreio-actors" }
+arreio-hypervisor = { path = "../arreio-hypervisor" }
+arreio-dag        = { path = "../arreio-dag" }
+arreio-ast        = { path = "../arreio-ast" }
+arreio-provider   = { path = "../arreio-provider" }
+arreio-gateway    = { path = "../arreio-gateway" }
+arreio-vault      = { path = "../arreio-vault" }
+arreio-security   = { path = "../arreio-security" }
+arreio-memory      = { path = "../arreio-memory" }
+arreio-mcp-server  = { path = "../arreio-mcp-server" }
+arreio-a2a         = { path = "../arreio-a2a" }
+arreio-skills      = { path = "../arreio-skills" }
+arreio-scheduler   = { path = "../arreio-scheduler" }
+arreio-telemetry   = { path = "../arreio-telemetry" }
+arreio-tools       = { path = "../arreio-tools" }
+arreio-agents      = { path = "../arreio-agents" }
+arreio-tui         = { path = "../arreio-tui" }
+arreio-problem-space = { path = "../arreio-problem-space" }
+arreio-ooda          = { path = "../arreio-ooda" }
+arreio-refinement    = { path = "../arreio-refinement" }
+arreio-contract      = { path = "../arreio-contract" }
+arreio-supercompile  = { path = "../arreio-supercompile" }
+arreio-recovery      = { path = "../arreio-recovery" }
+arreio-autopoiesis   = { path = "../arreio-autopoiesis" }
+arreio-slicer        = { path = "../arreio-slicer" }
+arreio-eqsat         = { path = "../arreio-eqsat" }
+arreio-bridge-claude = { path = "../arreio-bridge-claude" }
+arreio-bridge-cursor = { path = "../arreio-bridge-cursor" }
+arreio-bridge-hermes = { path = "../arreio-bridge-hermes" }
+arreio-bridge-openclaw = { path = "../arreio-bridge-openclaw" }
+arreio-benchmark   = { path = "../arreio-benchmark" }
+arreio-lsp         = { path = "../arreio-lsp" }
+arreio-reasoning   = { path = "../arreio-reasoning" }
+arreio-commissioning = { path = "../arreio-commissioning" }
+tempfile         = { workspace = true }

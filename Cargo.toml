@@ -1,0 +1,72 @@
+[workspace]
+members = [
+    "crates/arreio-kernel",
+    "crates/arreio-fsm",
+    "crates/arreio-actors",
+    "crates/arreio-hypervisor",
+    "crates/arreio-dag",
+    "crates/arreio-ast",
+    "crates/arreio-cli",
+    "crates/arreio-provider",
+    "crates/arreio-memory",
+    "crates/arreio-skills",
+    "crates/arreio-gateway",
+    "crates/arreio-lsp",
+    "crates/arreio-vault",
+    "crates/arreio-security",
+    "crates/arreio-scheduler",
+    "crates/arreio-telemetry",
+    "crates/arreio-mcp",
+    "crates/arreio-tools",
+    "crates/arreio-agents",
+    "crates/arreio-web",
+    "crates/arreio-tui",
+    "crates/arreio-media",
+    "crates/arreio-commissioning",
+    "crates/arreio-contract",
+    "crates/arreio-supercompile",
+    "crates/arreio-ooda",
+    "crates/arreio-problem-space",
+    "crates/arreio-reasoning",
+    "crates/arreio-recovery",
+    "crates/arreio-slicer",
+    "crates/arreio-refinement",
+    "crates/arreio-autopoiesis",
+    "crates/arreio-eqsat",
+    "crates/arreio-a2a",
+    "crates/arreio-mcp-server",
+    "crates/arreio-bridge-claude",
+    "crates/arreio-bridge-cursor",
+    "crates/arreio-bridge-hermes",
+    "crates/arreio-bridge-openclaw",
+    "crates/arreio-benchmark",
+    "tests/e2e",
+]
+resolver = "2"
+
+[workspace.dependencies]
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+uuid        = { version = "1", features = ["v4"] }
+anyhow      = "1"
+thiserror   = "1"
+regex       = "1"
+syn         = { version = "2", features = ["full", "parsing"] }
+quote       = "1"
+clap        = { version = "4", features = ["derive"] }
+crossbeam-channel = "0.5"
+num_cpus    = "1"
+tempfile    = "3"
+rustyline   = "14"
+crossterm   = "0.28"
+native-tls  = "0.2"
+serde_yaml  = "0.9"
+rusqlite    = "0.32"
+keyring     = "2"
+aes-gcm     = "0.10"
+sha2        = "0.10"
+pbkdf2      = "0.12"
+rand        = "0.8"
+
+[patch.crates-io]
+zmij = { path = "vendor/zmij" }

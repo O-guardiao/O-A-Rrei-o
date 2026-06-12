@@ -1,0 +1,18 @@
+[package]
+name    = "arreio-tui"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[dependencies]
+anyhow      = { workspace = true }
+arreio-kernel = { path = "../arreio-kernel" }
+arreio-dag    = { path = "../arreio-dag" }
+arreio-fsm    = { path = "../arreio-fsm" }
+arreio-memory = { path = "../arreio-memory" }
+arreio-media  = { path = "../arreio-media" }
+rustyline   = { workspace = true }
+crossterm   = { workspace = true }
+
+[dev-dependencies]
+tempfile    = { workspace = true }
