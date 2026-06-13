@@ -1,164 +1,118 @@
-# BRIDGE — Guia de Integração do Arreio com Ecossistemas Externos
+# BRIDGE — Guia de Integração do O Arreio com Ecossistemas Externos
 
-> **Versão:** 1.0.0  
-> **Status:** Draft  
-> **Autor:** O Arreio Integration Team  
-> **Data:** 2026-05-16  
-> **Idioma:** Português (comentários/exemplos) / Inglês (termos técnicos e protocolos)
+> **Versão:** 1.1.0 · **Data:** 2026-06-12
+> **Idioma:** Português (texto) / Inglês (termos técnicos e protocolos)
+>
+> **Status (honesto):** os comandos e portas abaixo foram **verificados contra o binário** (`arreio --help`) e testados ponta a ponta em 2026-06-12. Onde algo é design pretendido e ainda não implementado, está marcado **🚧 roadmap**. Limitações conhecidas estão na seção 8.
 
 ---
 
 ## 1. Visão Geral
 
-O **O Arreio** é projetado para ser um cidadão de primeira classe no ecossistema de agentes de IA. Este documento descreve os pontes de integração (bridges) entre o Arreio e quatro plataformas principais:
+O **O Arreio** é projetado para ser um cidadão de primeira classe no ecossistema de agentes de IA. Este documento descreve as pontes (bridges) entre o Arreio e quatro plataformas:
 
-1. **Claude Code** — via MCP stdio + wrapper headless.
-2. **Cursor** — via MCP SSE + sandbox de segurança.
-3. **Hermes Agent** — via API server OpenAI-compatible.
-4. **OpenClaw** — via REST client + import/export de tarefas.
+1. **Claude Code / Claude Desktop** — via MCP stdio.
+2. **Cursor** — via MCP SSE.
+3. **Hermes Agent** — via API OpenAI-compatible.
+4. **OpenClaw** — via cliente REST (teste de conexão; orquestração é 🚧 roadmap).
 
-Cada bridge é documentada com:
-- Arquitetura de conexão.
-- Passos de configuração.
-- Exemplos de interação.
-- Troubleshooting comum.
+> **Comandos reais (resumo):** todos os bridges saem de `arreio bridge <ferramenta>`.
+> ```bash
+> arreio bridge claude              # MCP stdio  → Claude Code/Desktop
+> arreio bridge cursor --port 7374  # MCP SSE     → Cursor
+> arreio bridge hermes --port 7375  # OpenAI API  → Hermes e qualquer cliente OpenAI
+> arreio bridge open-claw <url>     # testa conexão com um gateway OpenClaw
+> ```
+> O servidor MCP genérico (standalone) é `arreio mcp serve [stdio|http|sse] [--addr <host:porta>]`.
 
 ---
 
-## 2. Claude Code
+## 2. Claude Code / Claude Desktop
 
 ### 2.1 Arquitetura
 
-O Claude Code suporta servidores MCP via transporte **stdio**, executando o servidor como um subprocesso e se comunicando via JSON-RPC 2.0 sobre stdin/stdout.
+O Claude Code suporta servidores MCP via transporte **stdio**, executando o servidor como subprocesso e trocando JSON-RPC 2.0 (framing `Content-Length`, estilo LSP) por stdin/stdout. O `stdout` é o canal do protocolo — o O Arreio emite todos os logs em `stderr`.
 
 ```
-┌─────────────────┐         stdio (JSON-RPC)          ┌─────────────────────────┐
-│  Claude Code    │  ◄──────────────────────────────►  │  O Arreio MCP Server     │
-│  (Electron app) │                                    │  (cargo run --bin arreio) │
-│                 │                                    │  • Transport: stdio     │
-│                 │                                    │  • Tools: create_task   │
-│                 │                                    │  • Resources: blackboard│
-│                 │                                    │  • Prompts: planning    │
-└─────────────────┘                                    └─────────────────────────┘
+┌─────────────────┐         stdio (JSON-RPC, Content-Length)   ┌─────────────────────────┐
+│  Claude Code    │  ◄──────────────────────────────────────►  │  arreio bridge claude   │
+│  / Desktop      │                                            │  • Tools: 6 (ver §2.4)  │
+└─────────────────┘                                            └─────────────────────────┘
 ```
 
 ### 2.2 Configuração
 
-Crie ou edite o arquivo de configuração MCP do Claude Code:
-
-**Caminho:**
-- Windows: `%APPDATA%\Claude\mcp.json`
+Arquivo de configuração MCP:
+- Windows: `%APPDATA%\Claude\mcp.json` (Desktop) ou `.mcp.json` no projeto (Code)
 - macOS: `~/Library/Application Support/Claude/mcp.json`
 - Linux: `~/.config/Claude/mcp.json`
 
-**Conteúdo:**
+**Conteúdo (com o binário release no PATH):**
 ```json
 {
   "mcpServers": {
     "arreio": {
-      "command": "cargo",
-      "args": [
-        "run",
-        "--bin", "arreio",
-        "--",
-        "mcp",
-        "--transport", "stdio"
-      ],
-      "cwd": "<CAMINHO/ABSOLUTO/PARA>/arreio",
-      "env": {
-        "RUST_LOG": "info",
-        "PATH": "<HOME>/.cargo/bin;C:/msys64/ucrt64/bin"
-      },
-      "disabled": false,
-      "autoApprove": ["blackboard_read", "dag_status"]
+      "command": "arreio",
+      "args": ["bridge", "claude"],
+      "env": { "RUST_LOG": "info" }
     }
   }
 }
 ```
 
-**Notas de configuração:**
-- `cwd` deve apontar para o diretório raiz do workspace `arreio/`.
-- `PATH` deve incluir tanto o Cargo quanto o MSYS2 UCRT64 (para o linker).
-- `autoApprove` permite que o Claude execute tools de leitura sem confirmação do usuário. **Nunca** inclua `safe_execute` ou `checkpoint_rollback` em `autoApprove`.
+**Alternativa rodando do código-fonte (sem binário instalado):**
+```json
+{
+  "mcpServers": {
+    "arreio": {
+      "command": "cargo",
+      "args": ["run", "--quiet", "--bin", "arreio", "--", "bridge", "claude"],
+      "cwd": "<CAMINHO/ABSOLUTO/PARA>/arreio",
+      "env": {
+        "RUST_LOG": "info",
+        "PATH": "<HOME>/.cargo/bin;C:/msys64/ucrt64/bin"
+      }
+    }
+  }
+}
+```
 
-### 2.3 Wrapper Headless (Modo Autônomo)
+**Notas:**
+- `cargo run` recompila na primeira invocação — para um handshake rápido prefira o binário release (`cargo build --release` e use `target/release/arreio`).
+- Mantenha `RUST_LOG` apontando para `stderr` (padrão); nunca redirecione logs para `stdout`.
 
-Para execução autônoma sem a UI do Claude Code, use o wrapper headless:
+### 2.3 Verificação manual do handshake
 
+Você pode confirmar o servidor sem o Claude, enviando dois frames JSON-RPC:
 ```bash
-# arreio/scripts/claude-bridge.sh (ou .ps1 no Windows)
-#!/bin/bash
-# Wrapper headless para Claude Code + O Arreio
-
-set -e
-
-export ARREIO_MCP_TRANSPORT=stdio
-export ARREIO_BLACKBOARD_PATH="C:/dev/arreio-blackboard"
-
-# Inicia o Arreio em background
-arreio mcp --transport stdio &
-ARREIO_PID=$!
-
-# Aguarda handshake
-sleep 2
-
-# Executa o Claude Code em modo headless
-claude --mcp-server arreio --prompt "Crie uma tarefa para adicionar logging estruturado ao arreio-kernel"
-
-# Cleanup
-trap "kill $ARREIO_PID" EXIT
+b1='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
+b2='{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+{ printf 'Content-Length: %d\r\n\r\n%s' "${#b1}" "$b1"
+  printf 'Content-Length: %d\r\n\r\n%s' "${#b2}" "$b2"; } | arreio mcp serve stdio
 ```
+A saída em `stdout` deve trazer o `initialize` (protocolVersion `2024-11-05`) e a lista de 6 tools com seus `input_schema`.
 
-### 2.4 Exemplo de Sessão
+### 2.4 Tools expostas (reais)
 
-**Usuário no Claude Code:**
-```
-/claude use arreio
-Preciso que você refatore o módulo de memória para usar um GraphStore em vez de HashMap.
-```
+| Tool | Argumentos (required) | Função |
+|------|-----------------------|--------|
+| `blackboard_read` | `cat`, `key` | Lê uma tupla do Blackboard |
+| `blackboard_write` | `cat`, `key`, `value` | Escreve uma tupla |
+| `create_task` | `spec` (JSON TaskSpec) | Cria um nó no DAG |
+| `checkpoint_rollback` | `checkpoint_id` | Reverte para um checkpoint git |
+| `safe_execute` | `cmd` | Executa um comando no sandbox do Hypervisor |
+| `dag_status` | — | Status resumido do DAG |
 
-**Claude (via MCP):**
-```
-Vou delegar esta tarefa ao Arreio.
-
-[Chamando tool: create_task]
-  spec: "Refatorar arreio-memory para usar GraphStore ao invés de HashMap"
-  actor: "auto"
-
-✓ Tarefa criada: task-05e2
-  Estado FSM: Idle → Exploration
-
-[Chamando tool: dag_status]
-
-DAG Status:
-  • 1 nó pendente (task-05e2)
-  • 0 em execução
-  • 0 concluídos
-
-[Aguardando execução...]
-
-[Chamando tool: blackboard_read]
-  pattern: ["task", "task-05e2", null]
-
-✓ Task concluída. Artefatos gerados:
-  - crates/arreio-memory/src/graph_store.rs (142 linhas)
-  - crates/arreio-memory/src/tests/graph_store_tests.rs (68 linhas)
-
-[Chamando tool: safe_execute]
-  command: "cargo test -p arreio-memory"
-
-✓ Todos os testes passaram (exit code 0).
-```
+Especificação detalhada de cada tool, resources (`blackboard://`, `dag://`, `fsm://`) e prompts em [`ARREIO-MCP.md`](ARREIO-MCP.md).
 
 ### 2.5 Troubleshooting
 
-| Problema | Causa Provável | Solução |
+| Problema | Causa provável | Solução |
 |----------|----------------|---------|
-| `Failed to spawn MCP server` | PATH não inclui cargo ou gcc | Adicione `%USERPROFILE%/.cargo/bin` e `C:/msys64/ucrt64/bin` ao env |
-| `Connection reset` | Windows AppControl bloqueou o binário | Execute `cargo test -p arreio-cli` manualmente para "aquecer" o AppControl |
-| `Tool not found` | Configuração JSON malformada | Valide o JSON em https://jsonlint.com/ |
-| `Timeout ao criar task` | Ollama não está rodando | Inicie o Ollama: `ollama serve` |
-| `Exit code -2` | Comando excedeu timeout | Aumente `timeout_seconds` no argumento da tool |
+| `Failed to spawn MCP server` | binário não está no PATH | Use caminho absoluto em `command`, ou compile com `cargo build --release` |
+| Cliente conecta mas não lista tools | versão antiga sem schemas | Atualize: as tools passaram a expor `input_schema` em 2026-06-12 |
+| `Connection reset` (Windows) | AppControl bloqueou o binário recém-compilado | Rode o binário uma vez no terminal para o Windows escaneá-lo, depois reabra o cliente |
+| Lixo no início do stream | logs no stdout (versão antiga) | Corrigido em 2026-06-12: logs vão para stderr |
 
 ---
 
@@ -166,454 +120,127 @@ DAG Status:
 
 ### 3.1 Arquitetura
 
-O Cursor IDE suporta servidores MCP via transporte **SSE** (Server-Sent Events) ou **HTTP**. A configuração é feita na interface de settings do Cursor.
-
-```
-┌─────────────────┐         SSE/HTTP                    ┌─────────────────────────┐
-│  Cursor IDE     │  ◄──────────────────────────────►  │  O Arreio MCP Server     │
-│  (VS Code fork) │     JSON-RPC + event stream        │  (cargo run --bin arreio) │
-│                 │                                    │  • Transport: sse       │
-│                 │                                    │  • Port: 7373           │
-│                 │                                    │  • Sandbox: ativo       │
-└─────────────────┘                                    └─────────────────────────┘
-```
+O Cursor suporta MCP via **SSE**. O bridge do Arreio expõe `GET /sse` (abre o stream e anuncia o endpoint de POST) e `POST /message?session_id=<id>` (recebe JSON-RPC).
 
 ### 3.2 Configuração
 
-**Passo 1 — Inicie o Arreio em modo SSE:**
+**Passo 1 — Inicie o bridge Cursor:**
 ```bash
-cd arreio
-$env:PATH = "$env:USERPROFILE\.cargo\bin;C:\msys64\ucrt64\bin;$env:PATH"
-cargo run --bin arreio -- mcp --transport sse --port 7373
+arreio bridge cursor --port 7374
 ```
 
-**Passo 2 — Configure no Cursor:**
-1. Abra o Cursor.
-2. Vá em `Settings` → `Features` → `MCP Servers`.
-3. Clique em `Add New MCP Server`.
-4. Preencha:
-   - **Name:** `O Arreio`
-   - **Transport:** `sse`
-   - **URL:** `http://localhost:7373/mcp/sse`
+**Passo 2 — No Cursor:** `Settings → MCP → Add New MCP Server`
+- **Name:** `O Arreio`
+- **Type / Transport:** `sse`
+- **URL:** `http://localhost:7374/sse`
 
-**Passo 3 — Teste a conexão:**
-No chat do Cursor, diga:
-```
-Use o Arreio para verificar o status do DAG atual.
-```
+**Passo 3 — Teste:** no chat do Cursor, peça "use o Arreio para ver o status do DAG".
 
-### 3.3 Sandbox de Segurança no Cursor
+### 3.3 Troubleshooting
 
-O Cursor executa tools MCP em um sandbox interno. Para garantir compatibilidade:
+| Problema | Causa | Solução |
+|----------|-------|---------|
+| `Could not connect to SSE` | porta errada ou ocupada | Confirme `--port 7374` e a URL `/sse` |
+| `No tools available` | handshake falhou | Veja o log do bridge em stderr |
 
-1. **Não use paths absolutos sensíveis** nas descriptions das tools (ex: não mencione `C:/Users/<usuario>/Documents`).
-2. **Prefira resources sobre argumentos de path** — o cliente lê o resource e injeta o conteúdo no contexto.
-3. **Habilite o McpSandbox** no Arreio para validar descriptions antes do handshake.
-
-### 3.4 Exemplo de Sessão
-
-**Usuário no Cursor:**
-```
-@O Arreio Crie um checkpoint do estado atual e depois adicione uma nova skill de parsing de logs.
-```
-
-**Cursor (via MCP):**
-```
-[Chamando tool: checkpoint_rollback com steps=0 (apenas checkpoint)]
-✓ Checkpoint criado. Commit: a1b2c3d
-
-[Chamando tool: create_task]
-  spec: "Adicionar skill de parsing de logs ao arreio-skills"
-  actor: "developer"
-
-✓ Tarefa criada: task-06f3
-
-[Chamando tool: dag_status]
-  total_nodes: 3
-  pending: 2
-  running: 1
-
-[Streaming via SSE...]
-  event: state → working
-  event: artifact → skill_log_parser.rs
-  event: state → completed
-
-✓ Skill adicionada com sucesso. Testes: 12 passaram, 0 falharam.
-```
-
-### 3.5 Troubleshooting
-
-| Problema | Causa Provável | Solução |
-|----------|----------------|---------|
-| `Could not connect to SSE` | Firewall bloqueando porta 7373 | Abra a porta 7373 para localhost |
-| `No tools available` | Handshake falhou | Verifique se o Arreio logou `MCP initialize ok` |
-| `SSE connection dropped` | Timeout de inatividade | O Arreio envia ping a cada 30s; verifique `RUST_LOG` |
-| `Tool execution failed` | Windows AppControl | Execute o binário manualmente uma vez para liberar |
+> **Nota:** delegação para "Cursor Cloud" (`delegate()`) só ocorre se `CURSOR_CLOUD_ENDPOINT` estiver configurado; sem isso o bridge opera localmente e retorna um stub para essa rota específica (limitação registrada no MOCK_REGISTER, M-008).
 
 ---
 
-## 4. Hermes Agent
+## 4. Hermes Agent (e qualquer cliente OpenAI-compatible)
 
 ### 4.1 Arquitetura
 
-O **Hermes Agent** é uma plataforma de agentes que se comunica via API **OpenAI-compatible**. O Arreio expõe um servidor HTTP que emula a API de Chat Completions, permitindo que o Hermes trate o Arreio como um modelo LLM.
-
-```
-┌─────────────────┐      OpenAI-compatible API       ┌─────────────────────────┐
-│  Hermes Agent   │  ◄────────────────────────────►  │  O Arreio OpenAI Bridge  │
-│  (Python/Node)  │     POST /v1/chat/completions    │  (arreio-gateway)         │
-│                 │     Bearer Token auth            │  • Models: arreio-*    │
-│                 │     Streaming: application/json  │  • Tools expostas como  │
-│                 │                                  │    function calls       │
-└─────────────────┘                                  └─────────────────────────┘
-```
+O Arreio expõe um servidor HTTP que emula a API **OpenAI** (`/v1/models`, `/v1/chat/completions`), delegando ao `ProviderPool` (Ollama → OpenAI → Anthropic → Google → Azure, por prioridade).
 
 ### 4.2 Configuração
 
-**Passo 1 — Inicie o Arreio em modo OpenAI bridge:**
+**Passo 1 — Inicie o bridge:**
 ```bash
-cd arreio
-$env:PATH = "$env:USERPROFILE\.cargo\bin;C:\msys64\ucrt64\bin;$env:PATH"
-cargo run --bin arreio -- serve --port 7373 --bridge openai
+arreio bridge hermes --port 7375
 ```
 
-**Passo 2 — Configure o Hermes para apontar para o Arreio:**
-
-No arquivo de configuração do Hermes (`hermes_config.yaml`):
+**Passo 2 — Aponte o cliente para o Arreio.** Exemplo de config do Hermes:
 ```yaml
 llm:
   provider: openai
-  base_url: "http://localhost:7373/v1"
-  api_key: "arreio-no-key-required"  # O Arreio ignora a API key em modo local
-  model: "arreio-orchestrator"
-  temperature: 0.2
-  max_tokens: 4096
-
-tools:
-  - name: "create_task"
-    endpoint: "http://localhost:7373/v1/tools/create_task"
-  - name: "safe_execute"
-    endpoint: "http://localhost:7373/v1/tools/safe_execute"
+  base_url: "http://localhost:7375/v1"
+  api_key: "no-key-required"   # ignorado no modo local
+  model: "ollama"              # ou: openai | anthropic | google | azure
 ```
 
-### 4.3 Mapeamento de Function Calls
-
-O Arreio OpenAI Bridge mapeia as tools MCP para o formato `function` da API OpenAI:
-
-**Request do Hermes:**
-```json
-{
-  "model": "arreio-orchestrator",
-  "messages": [
-    { "role": "system", "content": "Você é o Arreio." },
-    { "role": "user", "content": "Crie uma tarefa para otimizar o parser do arreio-ast" }
-  ],
-  "tools": [
-    {
-      "type": "function",
-      "function": {
-        "name": "create_task",
-        "description": "Cria uma nova tarefa no Blackboard e insere um nó no DAG.",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "spec": { "type": "string" },
-            "priority": { "type": "integer" },
-            "actor": { "type": "string", "enum": ["architect", "developer", "inspector", "auto"] }
-          },
-          "required": ["spec"]
-        }
-      }
-    }
-  ],
-  "tool_choice": "auto"
-}
+**Passo 3 — Teste:**
+```bash
+curl http://localhost:7375/v1/models
+# {"object":"list","data":[{"id":"ollama",...},{"id":"openai",...}, ...]}
 ```
 
-**Response do Arreio (function call):**
-```json
-{
-  "id": "chatcmpl-arreio-123",
-  "object": "chat.completion",
-  "created": 1680000000,
-  "model": "arreio-orchestrator",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": null,
-        "tool_calls": [
-          {
-            "id": "call_abc123",
-            "type": "function",
-            "function": {
-              "name": "create_task",
-              "arguments": "{\"spec\":\"Otimizar o parser do arreio-ast para reduzir alocações\",\"priority\":3,\"actor\":\"developer\"}"
-            }
-          }
-        ]
-      },
-      "finish_reason": "tool_calls"
-    }
-  ]
-}
-```
+### 4.3 Modelos disponíveis (reais)
 
-### 4.4 Exemplo de Sessão
+O `/v1/models` retorna um id por provider carregado no pool: `ollama`, `openai`, `anthropic`, `google`, `azure`. O provider é selecionado pelo campo `model` da requisição; chaves de cloud vêm das variáveis de ambiente (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.) — sem a chave, aquele provider falha e o pool faz failover para o próximo.
 
-**Hermes (código Python):**
-```python
-from hermes import Agent
-
-agent = Agent(
-    llm_base_url="http://localhost:7373/v1",
-    model="arreio-orchestrator"
-)
-
-response = agent.run(
-    "Crie uma tarefa para adicionar suporte a Python no arreio-ast e execute os testes."
-)
-
-print(response)
-# Saída:
-# Task criada: task-07g4
-# DAG: 3 nós planejados
-# Testes: cargo test -p arreio-ast → 0 falhas
-```
-
-### 4.5 Modelos Disponíveis
-
-| Model ID | Descrição |
-|----------|-----------|
-| `arreio-orchestrator` | Pipeline completo (Arquiteto → DAG → Desenvolvedor → Inspetor) |
-| `arreio-architect` | Apenas o ator Arquiteto (planning e decomposição) |
-| `arreio-developer` | Apenas o ator Desenvolvedor (code generation) |
-| `arreio-inspector` | Apenas o ator Inspetor (code review e security audit) |
-| `arreio-hypervisor` | Apenas execução segura de comandos |
+> 🚧 **Roadmap:** "modelos de pipeline" (`arreio-orchestrator`, `arreio-architect`, …) que exporiam o pipeline de atores como um modelo único ainda não existem. Hoje cada `model` é um provider de inferência.
 
 ---
 
 ## 5. OpenClaw
 
-### 5.1 Arquitetura
-
-O **OpenClaw** é uma plataforma de orquestração de agentes com REST API. O Arreio integra-se via cliente REST que consome a API do OpenClaw e exporta/importa tarefas entre os dois sistemas.
-
-```
-┌─────────────────┐         REST JSON                ┌─────────────────────────┐
-│  OpenClaw       │  ◄────────────────────────────►  │  O Arreio OpenClaw       │
-│  (API Server)   │     POST /api/v1/tasks           │  Bridge (arreio-cli)      │
-│                 │     GET  /api/v1/tasks/{id}      │  • Import: tarefas OC   │
-│                 │     POST /api/v1/artifacts       │    → O Arreio DAG        │
-│                 │                                  │  • Export: resultados   │
-│                 │                                  │    → OpenClaw artifacts │
-└─────────────────┘                                  └─────────────────────────┘
-```
-
-### 5.2 Configuração
-
-No arquivo `configs/openclaw.toml`:
-```toml
-[openclaw]
-enabled = true
-base_url = "http://openclaw.local:8080/api/v1"
-api_key = "oc_api_key_a1b2c3d4"
-poll_interval_seconds = 5
-sync_direction = "bidirectional"  # "import", "export", "bidirectional"
-
-[mapping]
-# Mapeia status do OpenClaw para estados da FSM O Arreio
-openclaw_status.queued = "Idle"
-openclaw_status.running = "Execution"
-openclaw_status.completed = "Consolidation"
-openclaw_status.failed = "StrategicRetreat"
-
-# Mapeia tipos de tarefa OpenClaw para skills O Arreio
-openclaw_type.code = "code-generation"
-openclaw_type.shell = "safe-execution"
-openclaw_type.plan = "dag-orchestration"
-```
-
-### 5.3 Import de Tarefas (OpenClaw → O Arreio)
+### 5.1 O que existe hoje
 
 ```bash
-# Importa tarefas pendentes do OpenClaw para o Arreio
-cargo run --bin arreio -- bridge openclaw import --status queued --limit 10
-
-# Fluxo:
-# 1. Consulta GET /api/v1/tasks?status=queued&limit=10
-# 2. Para cada tarefa, cria uma tupla no Blackboard.
-# 3. Insere nó no DAG com skill mapeada.
-# 4. Atualiza status no OpenClaw para "running".
+arreio bridge open-claw <gateway_url>
 ```
-
-### 5.4 Export de Resultados (O Arreio → OpenClaw)
+Esse comando **testa a conexão** com um gateway OpenClaw (lista os cron jobs via REST) e reporta sucesso/falha. É o ponto de partida verificável da integração.
 
 ```bash
-# Exporta artefatos de tarefas concluídas para o OpenClaw
-cargo run --bin arreio -- bridge openclaw export --task task-08h5
-
-# Fluxo:
-# 1. Lê artefatos do Blackboard para task-08h5.
-# 2. POST /api/v1/artifacts com o conteúdo do arquivo.
-# 3. Atualiza a tarefa no OpenClaw com links para os artefatos.
+arreio bridge open-claw http://openclaw.local:8080
+# [arreio] ✓ Conectado. Cron jobs: [...]   (ou ✗ Falha: <motivo>)
 ```
 
-### 5.5 Sincronização Bidirecional
+### 5.2 🚧 Roadmap (ainda não implementado)
 
-```bash
-# Inicia loop de sincronização contínua
-cargo run --bin arreio -- bridge openclaw sync --daemon
-
-# Comportamento:
-# - A cada 5 segundos, verifica novas tarefas no OpenClaw.
-# - Importa para o Arreio e inicia execução.
-# - Quando concluída, exporta resultados de volta.
-# - Loga todas as operações no Audit Trail.
-```
-
-### 5.6 Exemplo de Sessão
-
-**Cenário:** Um workflow no OpenClaw cria uma tarefa de refactoring. O Arreio importa, executa e devolve o resultado.
-
-**OpenClaw (criação da tarefa):**
-```bash
-curl -X POST http://openclaw.local:8080/api/v1/tasks \
-  -H "Authorization: Bearer oc_api_key_a1b2c3d4" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Refatorar parser do arreio-ast",
-    "description": "Substituir regex fallback por parser nom parser_combinator",
-    "type": "code",
-    "priority": "high"
-  }'
-```
-
-**O Arreio (importação e execução):**
-```bash
-# O daemon de sincronização detecta a nova tarefa automaticamente
-# e a importa para o DAG.
-
-# Verifique o status:
-cargo run --bin arreio -- status
-
-# Saída:
-# ┌─────────┬─────────────┬────────────┬──────────┐
-# │ Task ID │ Estado FSM  │ DAG Status │ Progress │
-# ├─────────┼─────────────┼────────────┼──────────┤
-# │ task-09i│ Execution   │ 2/4 nós    │ 50%      │
-# └─────────┴─────────────┴────────────┴──────────┘
-
-# Após conclusão, o OpenClaw recebe os artefatos:
-curl http://openclaw.local:8080/api/v1/tasks/oc-task-123/artifacts
-# → ["parser_combinator.rs", "tests_parser.rs", "benchmark.json"]
-```
-
-### 5.7 Troubleshooting
-
-| Problema | Causa Provável | Solução |
-|----------|----------------|---------|
-| `Connection refused` | OpenClaw não está acessível | Verifique `base_url` e conectividade de rede |
-| `401 Unauthorized` | API key inválida | Regenere a chave no painel do OpenClaw |
-| `Mapping error` | Tipo de tarefa não mapeado | Adicione o tipo em `configs/openclaw.toml` |
-| `Sync loop travado` | Task em estado inconsistente | Pare o daemon, execute `arreio rollback`, reinicie |
+Import/export/sincronização bidirecional de tarefas entre OpenClaw e o DAG do Arreio (`import`, `export`, `sync --daemon`) são **design pretendido**, não comandos atuais. O crate `arreio-bridge-openclaw` já traz o cliente REST base (`OpenClawClient`) sobre o qual essa orquestração será construída. Não copie exemplos de `import/export/sync` — eles não existem nesta versão.
 
 ---
 
-## 6. Tabela Comparativa de Bridges
+## 6. Tabela comparativa
 
 | Aspecto | Claude Code | Cursor | Hermes | OpenClaw |
 |---------|-------------|--------|--------|----------|
-| **Protocolo** | MCP stdio | MCP SSE | OpenAI API | REST JSON |
-| **Transporte** | Pipe local | HTTP/SSE | HTTP | HTTP |
-| **Autenticação** | Nenhuma (local) | Nenhuma (local) | Bearer Token | API Key |
-| **Streaming** | Não | Sim (SSE) | Sim (SSE/chunked) | Não (polling) |
-| **Direção** | O Arreio como server | O Arreio como server | O Arreio como server | Bidirecional |
-| **Uso Ideal** | Desenvolvimento local | Desenvolvimento IDE | Integração programática | Orquestração cross-platform |
-| **Sandbox** | Dependente do cliente | Cursor sandbox + O Arreio | O Arreio Hypervisor | O Arreio Hypervisor |
-| **Complexidade** | Baixa | Baixa | Média | Média |
+| **Comando** | `bridge claude` | `bridge cursor --port 7374` | `bridge hermes --port 7375` | `bridge open-claw <url>` |
+| **Protocolo** | MCP stdio | MCP SSE | OpenAI HTTP | REST |
+| **Porta** | — (stdio) | 7374 | 7375 | — (cliente) |
+| **Estado** | ✅ testado E2E | ✅ implementado | ✅ testado E2E | ⚠️ só teste de conexão |
 
 ---
 
-## 7. Scripts de Automatização
+## 7. Rodando vários serviços juntos
 
-### 7.1 Script de Inicialização Multi-Bridge
+`arreio run <spec> --serve` (ou `arreio resume --serve`) sobe, em threads de background, o conjunto de serviços a partir de uma porta base (default 7373):
 
-```powershell
-# arreio/scripts/start-bridges.ps1
-# Inicia o Arreio com múltiplas bridges simultâneas
+| Serviço | Porta | Observação |
+|---------|-------|------------|
+| Gateway HTTP / dashboard | `base` (7373) | também via `arreio serve --port 7373` (só o gateway) |
+| MCP server (HTTP) | `base+1` (7374) | |
+| A2A server | `base+2` (7375) | ver [`ARREIO-A2A.md`](ARREIO-A2A.md) |
 
-$env:PATH = "$env:USERPROFILE\.cargo\bin;C:\msys64\ucrt64\bin;$env:PATH"
-$env:RUST_LOG = "info"
-
-# Inicia o gateway com MCP SSE + OpenAI Bridge
-Start-Process -FilePath "cargo" -ArgumentList @(
-    "run", "--bin", "arreio", "--",
-    "serve", "--port", "7373",
-    "--mcp-sse", "--openai-bridge"
-) -NoNewWindow -WorkingDirectory "<CAMINHO/ABSOLUTO/PARA>/arreio"
-
-Write-Host "O Arreio Gateway iniciado em http://localhost:7373"
-Write-Host "  MCP SSE:     http://localhost:7373/mcp/sse"
-Write-Host "  OpenAI API:  http://localhost:7373/v1"
-Write-Host "  A2A:         http://localhost:7373/a2a"
-```
-
-### 7.2 Script de Teste de Conectividade
-
-```bash
-#!/bin/bash
-# arreio/scripts/test-bridges.sh
-
-set -e
-
-ARREIO_URL="http://localhost:7373"
-
-echo "=== Testando bridges do Arreio ==="
-
-echo "[1/4] MCP SSE..."
-curl -s -o /dev/null -w "%{http_code}" "$ARREIO_URL/mcp/sse" | grep -q "200" && echo "OK" || echo "FALHOU"
-
-echo "[2/4] A2A AgentCard..."
-curl -s "$ARREIO_URL/a2a/agent-card" | jq -r '.name' | grep -q "O Arreio" && echo "OK" || echo "FALHOU"
-
-echo "[3/4] OpenAI Bridge (models)..."
-curl -s "$ARREIO_URL/v1/models" | jq -r '.data[0].id' | grep -q "arreio" && echo "OK" || echo "FALHOU"
-
-echo "[4/4] Health Check..."
-curl -s "$ARREIO_URL/health" | jq -r '.status' | grep -q "ok" && echo "OK" || echo "FALHOU"
-
-echo "=== Teste concluído ==="
-```
+Os bridges da seção 2–5 são processos **separados**, iniciados sob demanda — não fazem parte desse conjunto de background.
 
 ---
 
-## 8. Considerações de Segurança nas Integrações
+## 8. Limitações conhecidas (registradas, não escondidas)
 
-1. **Nunca exponha o Arreio diretamente à internet** sem reverse proxy + mTLS.
-2. **Desative stdio em produção** — use apenas HTTP/SSE com autenticação.
-3. **Revogue API keys periodicamente** — especialmente para Hermes e OpenClaw.
-4. **Monitore o Audit Trail** para detectar chamadas suspeitas de bridges externas.
-5. **Use o McpSandbox** para validar descriptions antes de expor tools a clientes MCP.
-
----
-
-## 9. Glossário
-
-| Termo (EN) | Definição (PT) |
-|------------|----------------|
-| Bridge | Ponto de integração entre O Arreio e uma plataforma externa |
-| stdio | Standard input/output — transporte via pipe de subprocesso |
-| SSE | Server-Sent Events — stream HTTP unidirecional do servidor |
-| MCP | Model Context Protocol — protocolo da Anthropic para LLM ↔ tools |
-| OpenAI-compatible API | API que emula o formato de requests/responses da OpenAI |
-| Function Call | Mecanismo da OpenAI API para invocar funções externas |
-| Headless | Execução sem interface gráfica, via CLI ou script |
-| Bidirectional Sync | Sincronização de dados em ambas as direções |
-| Artifact | Arquivo ou dado produzido pela execução de uma tarefa |
-| Bearer Token | Token de autenticação enviado no header HTTP |
+- **OpenClaw**: só `teste de conexão`; orquestração import/export/sync é roadmap (§5.2).
+- **Cursor Cloud delegate**: stub sem `CURSOR_CLOUD_ENDPOINT` (MOCK_REGISTER M-008).
+- **MCP/A2A servers**: cobertos por testes unitários e smoke E2E; faltam testes E2E de threads de longa duração (dívida D-005).
+- **A2A AgentCard**: o campo `url` pode trazer um placeholder; o endereço real é o do log `[a2a] Iniciando em http://...`.
 
 ---
 
-> **Nota final:** As bridges são pontes vivas entre o Arreio e o ecossistema. Novas plataformas (Windsurf, Continue, Copilot, etc.) podem ser adicionadas seguindo os padrões aqui estabelecidos. Toda nova bridge deve ter: (1) documentação neste arquivo, (2) testes unitários no crate `arreio-gateway`, e (3) entrada no `AGENTS.md` raiz.
+## 9. Considerações de segurança
+
+1. Não exponha o Arreio diretamente à internet sem reverse proxy + TLS.
+2. stdio é para uso local (subprocesso); para rede use HTTP/SSE em `127.0.0.1` ou atrás de proxy autenticado.
+3. Monitore o audit trail (`~/.arreio/audit/`) para chamadas de bridges externas.
+
+> **Nota:** novas plataformas podem ser adicionadas seguindo os padrões aqui. Toda nova bridge deve ter: (1) documentação neste arquivo, (2) testes no respectivo crate `arreio-bridge-*`, e (3) entrada no `AGENTS.md`.

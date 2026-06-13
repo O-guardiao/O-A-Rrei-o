@@ -54,8 +54,8 @@ Windows GNU-toolchain users: see `.cargo/config.toml.example`.
 This project is developed with a commissioning methodology (PVC): **nothing hidden behind a green badge**. Current state:
 
 - ✅ Runtime, hypervisor, ledger, credentials, vault, DAG/rollback, multi-provider: implemented and covered by 1,862 unit/E2E tests.
-- ⚠️ Bridges (Claude Code, Cursor, Hermes, OpenClaw) implement the protocols but have **not yet been validated against the real tools end-to-end**.
-- ⚠️ MCP/A2A servers run, but lack long-lived real-thread E2E tests.
+- ✅ **MCP stdio** (`initialize` + `tools/list` with real input schemas) and the **OpenAI bridge** (`/v1/models`) validated end-to-end by smoke tests (2026-06-12). Connect Claude Code with `arreio bridge claude`, Cursor with `arreio bridge cursor`, any OpenAI client with `arreio bridge hermes` — see [`BRIDGE.md`](BRIDGE.md).
+- ⚠️ Bridges still need validation against the real GUI apps (Claude Desktop, Cursor) and long-lived-thread E2E tests; the OpenClaw bridge is connection-test only (task orchestration is roadmap).
 - ❌ No macOS sandbox yet (Windows tested; Linux implemented, untested in CI).
 
 If you hit friction, open an issue — early-adopter feedback is exactly what this phase is for.

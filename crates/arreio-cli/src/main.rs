@@ -3743,7 +3743,8 @@ fn cmd_mcp(action: McpAction) -> Result<()> {
                     other
                 ),
             };
-            println!("[arreio] Iniciando MCP server...");
+            // Log vai para stderr: no transporte stdio o stdout é o canal JSON-RPC do protocolo MCP.
+            eprintln!("[arreio] Iniciando MCP server...");
             mcp.serve(transport)?;
         }
     }
@@ -3760,7 +3761,8 @@ fn cmd_bridge(action: BridgeAction) -> Result<()> {
 
     match action {
         BridgeAction::Claude => {
-            println!("[arreio] Iniciando bridge Claude (MCP stdio)...");
+            // Log vai para stderr: o stdout é o canal JSON-RPC do MCP que o Claude Code consome.
+            eprintln!("[arreio] Iniciando bridge Claude (MCP stdio)...");
             let mcp = arreio_mcp_server::ArreioMcpServer::new(bb, hv, fsm);
             let bridge = arreio_bridge_claude::ClaudeMcpServer::new(mcp);
             bridge.serve_stdio()?;

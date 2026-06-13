@@ -206,10 +206,7 @@ impl ArreioMcpServer {
                 McpCapability::Tool { name, description } => Some(McpTool {
                     name: name.clone(),
                     description: description.clone(),
-                    input_schema: serde_json::json!({
-                        "type": "object",
-                        "properties": {},
-                    }),
+                    input_schema: tool_input_schema(name),
                 }),
                 _ => None,
             })
@@ -445,6 +442,51 @@ struct TaskSpec {
 
 fn default_actor() -> String {
     "developer".to_string()
+}
+
+/// JSON Schema dos argumentos de cada tool exposta no MCP `tools/list`.
+/// Mantém o cliente (Claude Code, Cursor) ciente dos campos esperados por tool.
+fn tool_input_schema(name: &str) -> Value {
+    let obj = |props: Value, required: Value| {
+        serde_json::json!({"type": "object", "properties": props, "required": required})
+    };
+    match name {
+        "blackboard_read" => obj(
+            serde_json::json!({
+                "cat": {"type": "string", "description": "Categoria da tupla"},
+                "key": {"type": "string", "description": "Chave da tupla"}
+            }),
+            serde_json::json!(["cat", "key"]),
+        ),
+        "blackboard_write" => obj(
+            serde_json::json!({
+                "cat": {"type": "string", "description": "Categoria da tupla"},
+                "key": {"type": "string", "description": "Chave da tupla"},
+                "value": {"type": "string", "description": "Valor a escrever"}
+            }),
+            serde_json::json!(["cat", "key", "value"]),
+        ),
+        "create_task" => obj(
+            serde_json::json!({
+                "spec": {"type": "string", "description": "Especificação da tarefa em JSON (TaskSpec: id, title, depends_on)"}
+            }),
+            serde_json::json!(["spec"]),
+        ),
+        "checkpoint_rollback" => obj(
+            serde_json::json!({
+                "checkpoint_id": {"type": "string", "description": "ID do checkpoint git para reverter"}
+            }),
+            serde_json::json!(["checkpoint_id"]),
+        ),
+        "safe_execute" => obj(
+            serde_json::json!({
+                "cmd": {"type": "string", "description": "Comando de shell a executar no sandbox do Hypervisor"}
+            }),
+            serde_json::json!(["cmd"]),
+        ),
+        "dag_status" => obj(serde_json::json!({}), serde_json::json!([])),
+        _ => serde_json::json!({"type": "object", "properties": {}}),
+    }
 }
 
 /// Cria uma nova tarefa no DAG a partir de uma especificação JSON.

@@ -1,10 +1,9 @@
 # ARREIO-A2A — Especificação de Compatibilidade A2A (Agent-to-Agent)
 
-> **Versão:** 1.0.0  
-> **Status:** Draft  
-> **Autor:** O Arreio Core Team  
-> **Data:** 2026-05-16  
-> **Idioma:** Português (comentários/exemplos) / Inglês (termos técnicos e protocolos)
+> **Versão:** 1.1.0 · **Data:** 2026-06-12
+> **Idioma:** Português (texto) / Inglês (termos técnicos e protocolos)
+>
+> **Status (honesto):** o servidor A2A é **implementado** no crate `arreio-a2a` (`AgentCard`, lifecycle de task, `GET /a2a/agent-card`, servidor HTTP síncrono próprio `serve_a2a`). Correções desta versão: (1) o A2A **não** é servido pelo `arreio-gateway` — tem servidor próprio; (2) ele sobe junto com **`arreio run <spec> --serve`** (ou `resume --serve`) em uma thread de background, no endereço `127.0.0.1:<base+2>` (default **7375**) — confira o log `[a2a] Iniciando em http://...`; (3) o projeto é **100% síncrono** — qualquer `.await` em exemplos é conceitual. O papel de **cliente A2A** (delegar para agentes externos, §7.2) é **🚧 roadmap**.
 
 ---
 
@@ -18,7 +17,7 @@ O protocolo A2A é baseado em HTTP/JSON e define um modelo de comunicação stat
 - Tarefas são criadas via POST e acompanhadas via GET polling ou SSE streaming.
 - O ciclo de vida de uma task segue estados bem definidos, permitindo interoperabilidade entre diferentes implementações.
 
-O Arreio integra o A2A Layer no crate `arreio-gateway`, reaproveitando o servidor HTTP síncrono já existente. Não há adição de runtime async — o polling e o streaming são implementados com mecanismos síncronos de buffer circular e chunked transfer encoding.
+O A2A é implementado no crate **`arreio-a2a`**, com servidor HTTP síncrono próprio (`serve_a2a`) — **não** depende do `arreio-gateway`. Ele sobe junto com `arreio run <spec> --serve` em uma thread de background (porta base+2, default 7375). Não há runtime async — polling e streaming usam mecanismos síncronos.
 
 ---
 
@@ -522,22 +521,14 @@ curl http://localhost:7373/a2a/tasks/a2a-task-77d2 | jq '.artifacts[] | {name, m
 
 ---
 
-### 7.2 Cenário: O Arreio Delega para Agente Externo
+### 7.2 🚧 Roadmap: O Arreio Delega para Agente Externo
 
-O Arreio também pode atuar como cliente A2A. Quando o Arquiteto identifica que uma subtarefa requer uma capacidade não disponível internamente (ex: design de UI/UX), ele pode delegar a um agente externo.
+> **Não implementado nesta versão.** O Arreio hoje atua como **agente produtor** (recebe e executa tasks A2A). O papel inverso — **cliente A2A** que descobre e delega para agentes externos — é design pretendido. O exemplo abaixo é conceitual (o tipo `A2AClient` ainda não existe; o projeto é síncrono, sem `await`):
 
-**Exemplo de delegação interna:**
 ```rust
-// Dentro do ator Arquiteto (arreio-actors)
-use arreio_gateway::a2a::A2AClient;
-
-let client = A2AClient::discover("http://design-agent.local:8080/a2a/agent-card");
-let subtask = client.create_task(
-    "Crie um wireframe HTML para o dashboard do Arreio",
-    "ui-design"
-).await?; // Nota: await aqui é conceitual; implementação real é síncrona com poll
-
-// Aguarda conclusão e recebe o artefato
+// CONCEITUAL — API futura, síncrona (sem async/await)
+let client = A2AClient::discover("http://design-agent.local:8080/a2a/agent-card")?;
+let subtask = client.create_task("Crie um wireframe HTML", "ui-design")?;
 let artifact = client.poll_for_artifact(&subtask.id, "wireframe.html", Duration::from_secs(120))?;
 blackboard.write_tuple(("artifact", subtask.id, artifact.content))?;
 ```

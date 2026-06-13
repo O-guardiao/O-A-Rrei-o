@@ -1,10 +1,24 @@
 # ARREIO-MCP — Especificação do MCP Server O Arreio
 
-> **Versão:** 1.0.0  
-> **Status:** Draft  
-> **Autor:** O Arreio Core Team  
-> **Data:** 2026-05-16  
-> **Idioma:** Português (comentários/exemplos) / Inglês (termos técnicos e protocolos)
+> **Versão:** 1.1.0 · **Data:** 2026-06-12
+> **Idioma:** Português (texto) / Inglês (termos técnicos e protocolos)
+>
+> **Status (honesto):** este documento mistura **especificação de design** (resources, prompts, exemplos ricos de schema) com a **implementação atual verificada**. Onde divergirem, **vale a tabela canônica abaixo**, extraída do código (`tools/list` real, testado em 2026-06-12). Itens de design ainda não implementados estão marcados **🚧 roadmap**.
+
+### Fonte de verdade — tools implementadas (`tools/list`)
+
+| Tool | Argumentos required | Função |
+|------|---------------------|--------|
+| `blackboard_read` | `cat`, `key` | Lê uma tupla do Blackboard |
+| `blackboard_write` | `cat`, `key`, `value` | Escreve uma tupla |
+| `create_task` | `spec` (JSON TaskSpec) | Cria um nó no DAG |
+| `checkpoint_rollback` | `checkpoint_id` | Rollback git |
+| `safe_execute` | `cmd` | Comando no sandbox do Hypervisor |
+| `dag_status` | — | Status do DAG |
+
+> ⚠️ Os blocos de **Input Schema** nas seções 4.x abaixo são **ilustrativos do design** e usam nomes de campo mais ricos (`command`, `pattern`, `priority`, `steps`…) que **não** correspondem aos argumentos reais. Para integrar, use os nomes da tabela acima. Alinhamento completo dos schemas é 🚧 roadmap.
+>
+> **Comandos reais:** `arreio mcp serve [stdio|http|sse] [--addr <host:porta>]` (standalone) ou `arreio bridge claude` / `arreio bridge cursor` (ver [`BRIDGE.md`](BRIDGE.md)). **Framing:** `Content-Length` (estilo LSP). **protocolVersion:** `2024-11-05`.
 
 ---
 
@@ -689,7 +703,8 @@ Usado principalmente para integração com **Claude Code** e outros clientes que
 
 **Comando de inicialização:**
 ```bash
-cargo run --bin arreio -- mcp --transport stdio
+arreio mcp serve stdio          # standalone
+# ou, para Claude Code/Desktop:  arreio bridge claude
 ```
 
 **Características:**
@@ -706,7 +721,8 @@ Usado para integração com **Cursor** e IDEs que suportam MCP over HTTP.
 
 **Comando:**
 ```bash
-cargo run --bin arreio -- mcp --transport sse --port 7373
+arreio mcp serve sse --addr 127.0.0.1:7374    # standalone
+# ou, para o Cursor:  arreio bridge cursor --port 7374  (rota GET /sse)
 ```
 
 **Endpoint:** `GET /mcp/sse`
@@ -816,13 +832,9 @@ No arquivo de configuração do Claude Code (`.claude/mcp.json`):
 {
   "mcpServers": {
     "arreio": {
-      "command": "cargo",
-      "args": ["run", "--bin", "arreio", "--", "mcp", "--transport", "stdio"],
-      "cwd": "<CAMINHO/ABSOLUTO/PARA>/arreio",
-      "env": {
-        "RUST_LOG": "info",
-        "PATH": "<HOME>/.cargo/bin;C:/msys64/ucrt64/bin"
-      }
+      "command": "arreio",
+      "args": ["bridge", "claude"],
+      "env": { "RUST_LOG": "info" }
     }
   }
 }
@@ -886,7 +898,7 @@ DAG Status:
 
 ## 11. Versionamento e Compatibilidade
 
-- **Versão do protocolo MCP:** 2025-03-26 (latest stable)
+- **Versão do protocolo MCP:** 2024-11-05 (anunciada no `initialize`)
 - **Versão da API O Arreio MCP:** 1.0.0
 - **Backward compatibility:** Garantida para versões 1.x do protocolo MCP.
 - **CHANGELOG:** Ver `docs/mcp-changelog.md` para histórico de alterações.

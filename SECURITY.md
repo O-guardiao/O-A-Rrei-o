@@ -1,11 +1,10 @@
-# SECURITY — Políticas de Segurança do Arreio
+# SECURITY — Políticas de Segurança do O Arreio
 
-> **Versão:** 1.0.0  
-> **Status:** Draft  
-> **Autor:** O Arreio Security Team  
-> **Data:** 2026-05-16  
-> **Classificação:** Público — diretrizes de deploy e operação  
-> **Idioma:** Português (comentários/exemplos) / Inglês (termos técnicos e protocolos)
+> **Versão:** 1.1.0 · **Data:** 2026-06-12
+> **Classificação:** Público — diretrizes de deploy e operação
+> **Idioma:** Português (texto) / Inglês (termos técnicos e protocolos)
+>
+> **Status (honesto):** os mecanismos centrais (DLP, blocklist do Hypervisor, audit ledger hash-chain, RBAC, sandbox MCP) **existem no código** e estão cobertos por testes — os caminhos de arquivo foram corrigidos nesta versão para apontar aos crates reais. As seções de **deploy em produção** (mTLS, JWT, WAF, replicação remota) e alguns **comandos de CLI** (`arreio audit …`, `arreio security …`) descrevem **postura pretendida / 🚧 roadmap**, não recursos já expostos. Marcações ao longo do texto.
 
 ---
 
@@ -25,7 +24,7 @@ A segurança do **O Arreio** é projetada em camadas, seguindo o princípio da *
 
 ### 2.1 Padrões Detectados
 
-O módulo DLP do Arreio (implementado em `arreio-hypervisor/src/dlp.rs`) utiliza regex compilados para detectar padrões sensíveis em:
+O módulo DLP do Arreio (implementado em `arreio-security/src/dlp.rs`) utiliza regex compilados para detectar padrões sensíveis em:
 - Saídas de comandos (`stdout`, `stderr`).
 - Conteúdo escrito no Blackboard.
 - Mensagens trocadas via MCP e A2A.
@@ -118,7 +117,7 @@ O **Leak Prevention** atua antes mesmo do DLP — ele intercepta comandos e oper
 
 ### 3.1 Interceptação de Comandos (Hypervisor)
 
-O Hypervisor (`arreio-hypervisor/src/interceptor.rs`) mantém uma **blocklist regex** de comandos que nunca devem ser executados, independentemente do contexto:
+O Hypervisor (`arreio-hypervisor/src/sandbox.rs`, com regras de shell em `bash_security.rs`) mantém uma **blocklist regex** de comandos que nunca devem ser executados, independentemente do contexto:
 
 ```rust
 pub const COMMAND_BLOCKLIST: &[&str] = &[
@@ -233,16 +232,15 @@ O Audit Trail é persistido em:
 
 ### 4.4 Verificação de Integridade
 
-```bash
-# Comando CLI para verificar a cadeia de auditoria
-cargo run --bin arreio -- audit verify
+> 🚧 **Roadmap:** um subcomando `arreio audit verify` para verificar a cadeia ainda **não existe** no CLI. A integridade hoje é validada pelos testes do crate (`cargo test -p arreio-security`) e pela verificação do hash encadeado em código. A saída abaixo é o **formato pretendido** desse comando futuro:
 
-# Saída esperada:
-# Verificando cadeia de auditoria...
-# Eventos: 1847
-# Hash inicial: 0000...0000 (genesis)
-# Hash final: 8e4c2a1...f5b3
-# Integridade: OK (nenhuma quebra detectada)
+```text
+# (formato pretendido — comando ainda não implementado)
+Verificando cadeia de auditoria...
+Eventos: 1847
+Hash inicial: 0000...0000 (genesis)
+Hash final: 8e4c2a1...f5b3
+Integridade: OK (nenhuma quebra detectada)
 ```
 
 ### 4.5 Eventos Auditados
@@ -288,7 +286,7 @@ cargo run --bin arreio -- audit verify
 ### 5.3 Controle de Acesso no Código
 
 ```rust
-// arreio-gateway/src/rbac.rs
+// arreio-security/src/rbac.rs  (papéis reais: Admin, Developer, Auditor, Guest)
 pub fn check_permission(role: Role, operation: Operation) -> Result<(), RbacError> {
     let matrix = match role {
         Role::Admin => return Ok(()),
@@ -331,7 +329,7 @@ O **McpSandbox** é o módulo de segurança específico para mitigar ataques de 
 ### 6.2 Validação de Descriptions
 
 ```rust
-// arreio-gateway/src/mcp_sandbox.rs
+// arreio-mcp-server/src/sandbox.rs
 const MAX_DESCRIPTION_LEN: usize = 500;
 const FORBIDDEN_DESCRIPTION_PATTERNS: &[&str] = &[
     r"(?i)ignore\s+(all\s+)?previous\s+instructions",
@@ -451,21 +449,22 @@ impl SessionRateLimiter {
 - [ ] Configurar log rotation para `logs/audit/audit.chain`.
 - [ ] Testar o procedimento de rollback antes de colocar em produção.
 
-### 7.5 Comando de Verificação de Segurança
+### 7.5 Verificação de Segurança
+
+Hoje a verificação de segurança é feita pelos testes dos crates (caminho real e verificável):
 
 ```bash
-# Executa todas as verificações de segurança
-cargo run --bin arreio -- security audit
+# Testa o Hypervisor (blocklist/sandbox) contra comandos maliciosos
+cargo test -p arreio-hypervisor
 
-# Verifica integridade do audit trail
-cargo run --bin arreio -- audit verify
+# Testa DLP, RBAC e audit ledger
+cargo test -p arreio-security
 
-# Lista regras DLP ativas
-cargo run --bin arreio -- security dlp-status
-
-# Testa o Hypervisor contra um conjunto de comandos maliciosos
-cargo test -p arreio-hypervisor -- security_sandbox
+# Testa o sandbox MCP (tool poisoning / rate limit)
+cargo test -p arreio-mcp-server
 ```
+
+> 🚧 **Roadmap:** subcomandos agregadores `arreio security audit` e `arreio security dlp-status` ainda **não existem** no CLI. Quando existirem, encapsularão as verificações acima num só comando.
 
 ---
 
