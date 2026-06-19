@@ -858,7 +858,10 @@ fn api_metrics(stream: &mut TcpStream, bb: Blackboard) -> Result<()> {
 
 fn api_health(stream: &mut TcpStream, bb: Blackboard) -> Result<()> {
     let collector = arreio_telemetry::MetricsCollector::new(bb.clone());
-    let results = arreio_telemetry::HealthProbe::check_all(None, Some(&collector));
+    // Correção: passar o caminho real de persistência do Blackboard (antes ia `None`,
+    // que caía sempre no ramo "caminho não verificado" → status Degraded enganoso).
+    // Agora a sonda é honesta: Healthy se o db existe, Unhealthy se o path existe mas o arquivo não.
+    let results = arreio_telemetry::HealthProbe::check_all(Some(bb.store_path()), Some(&collector));
     let overall = arreio_telemetry::HealthProbe::aggregate(&results);
     let body = serde_json::json!({
         "status": match overall {
@@ -1272,5 +1275,37 @@ mod tests {
         let (system, user) = parse_openai_messages(&payload);
         assert!(system.is_empty());
         assert_eq!(user, "Nova pergunta");
+    }
+
+    // Regressão do bug do /health: api_health passava `None` como caminho do
+    // Blackboard, caindo sempre no ramo "caminho não verificado" → status Degraded
+    // enganoso. O fix passa `Some(bb.store_path())`. Double-entry: provamos que o
+    // caminho real dá Healthy E que o `None` antigo dava Degraded (isola a causa).
+    #[test]
+    fn health_blackboard_com_caminho_real_fica_healthy_nao_degraded() {
+        use tempfile::NamedTempFile;
+        let f = NamedTempFile::new().unwrap();
+        let path = f.path().to_path_buf();
+        drop(f);
+        let bb = Blackboard::open(&path).unwrap();
+        bb.persist_now().unwrap();
+        assert!(bb.store_path().exists(), "db do blackboard deveria existir em disco");
+
+        let collector = arreio_telemetry::MetricsCollector::new(bb.clone());
+
+        // Caminho do FIX: Some(store_path) com db existente → Healthy.
+        let fixed = arreio_telemetry::HealthProbe::check_all(Some(bb.store_path()), Some(&collector));
+        let fixed_bb = fixed.iter().find(|r| r.name == "blackboard").expect("sonda blackboard");
+        assert_eq!(
+            fixed_bb.status,
+            arreio_telemetry::HealthStatus::Healthy,
+            "com caminho real e db existente deve ser Healthy; msg={}",
+            fixed_bb.message
+        );
+
+        // Caminho do BUG (contraste): None → Degraded. Garante que o fix é a causa.
+        let buggy = arreio_telemetry::HealthProbe::check_all(None, Some(&collector));
+        let buggy_bb = buggy.iter().find(|r| r.name == "blackboard").unwrap();
+        assert_eq!(buggy_bb.status, arreio_telemetry::HealthStatus::Degraded);
     }
 }
