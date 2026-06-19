@@ -6,3 +6,5 @@
 *.yaml text eol=lf
 *.sh text eol=lf
 *.ps1 text eol=crlf
+# Hook sem extensão: força LF para o shebang funcionar em clones Windows.
+scripts/git-hooks/pre-commit text eol=lf

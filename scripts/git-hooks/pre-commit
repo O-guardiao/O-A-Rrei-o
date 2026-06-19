@@ -1,0 +1,50 @@
+#!/bin/sh
+# ============================================================================
+# Pre-commit guard: mantém apenas o dashboard.html base no versionamento.
+#
+# O repositório versiona uma versão base de `dashboard.html` (servida em GET /).
+# Builds locais maiores (gerados) não devem ser commitados. Este hook bloqueia:
+#   1. variantes dashboard.<algo>.html (builds/backups locais).
+#   2. dashboard.html STAGED > 50 KB ou com marcadores de bundle (build gerado).
+#
+# Instalação: copiar para .git/hooks/pre-commit (cópia rastreada aqui)
+#   ou: git config core.hooksPath scripts/git-hooks
+# ============================================================================
+DASH="crates/arreio-gateway/assets/dashboard.html"
+fail=0
+
+# Arquivos staged sendo adicionados/modificados (ignora deleções).
+staged=$(git diff --cached --name-only --diff-filter=AM)
+
+# 1. Variantes locais (dashboard.<algo>.html) nunca devem ser commitadas.
+for f in $staged; do
+  case "$f" in
+    */dashboard.html|dashboard.html) : ;;  # a versão base pode
+    */dashboard.*.html|dashboard.*.html)
+      echo "BLOQUEADO: '$f' é variante local — não deve ir ao versionamento."
+      fail=1
+      ;;
+  esac
+done
+
+# 2. dashboard.html: só a versão base deve ser commitada.
+if echo "$staged" | grep -qx "$DASH"; then
+  size=$(git show ":$DASH" | wc -c | tr -d ' ')
+  if [ "$size" -gt 50000 ]; then
+    echo "BLOQUEADO: $DASH staged tem $size bytes (> 50000) — parece um build gerado."
+    fail=1
+  fi
+  if git show ":$DASH" | grep -qE 'type="module"|/assets/index|crossorigin'; then
+    echo "BLOQUEADO: $DASH staged contém marcadores de bundle (build gerado)."
+    fail=1
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo ""
+  echo "-> Versione apenas o dashboard.html base. Builds locais ficam fora do git:"
+  echo "     git reset HEAD $DASH"
+  echo "     git update-index --skip-worktree $DASH"
+  exit 1
+fi
+exit 0

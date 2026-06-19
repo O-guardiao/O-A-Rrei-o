@@ -1,0 +1,6 @@
+# O repositório versiona apenas o `dashboard.html` base (servido em GET /).
+# Variantes e builds locais (dashboard.<algo>.html) não entram no versionamento.
+# A versão local maior é mantida fora do índice via:
+#     git update-index --skip-worktree crates/arreio-gateway/assets/dashboard.html
+# O pre-commit hook em scripts/git-hooks/ reforça esse limite.
+dashboard.*.html
